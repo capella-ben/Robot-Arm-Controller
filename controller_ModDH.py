@@ -1,5 +1,5 @@
 import roboticstoolbox as rtb
-from roboticstoolbox import DHRobot, RevoluteDH
+from roboticstoolbox import DHRobot, RevoluteMDH
 from spatialmath import SE3
 from math import pi, atan2
 import numpy as np
@@ -8,81 +8,76 @@ from tabulate import tabulate
 
 class mark4(DHRobot):
     """
-    Class that models Axel's mark IV arm
+    Class that models the mark IVa Robot Arm
     Defined joint configurations are:
         - qz, zero joint angle configuration
         - qr, vertical 'READY' configuration
         - qh, Homed position
-        - q1, Extreme position
-        - q2, The other extreme position
     .. note:: SI units of metres are used.
     """  # noqa
     def __init__(self):
         deg = pi/180
 
-        # robot length values (metres)
-        d1 = 0.110      # Distance from the table to the axis of the shoulder joint
-        a1 = 0
-        d2 = 0
-        a2 = 0.225      # Distance from shoulder axis to elbow axis
-        d3 = 0
-        a3 = 0.0
-        d4 = 0.248      # Distance from elbow axis to Wrist 2 axis
-        a4 = 0
-        d5 = 0
-        a5 = 0
-        d6 = 0.103        # Distance from wrist 2 to tip of gripper
-        a6 = 0
-
+        # visualisation:  https://vis-ro.web.app/robotics/modified-dh-model
         L = [
-            RevoluteDH(                     # Table
-                d=d1,
-                a=a1,
-                alpha=-pi/2,
-                flip=True,
-                qlim=[-177*deg, 177*deg],
-                offset=-177*deg
-            ),
-
-            RevoluteDH(                     # Shoulder
-                d=d2,
-                a=a2,
-                alpha=pi,
-                qlim=[-85*deg, 85*deg],
-                flip=True,
-                offset=-85*deg
-            ),
-
-            RevoluteDH(                     # Elbow
-                d=d3,
-                a=a3,
-                alpha=-pi/2,
-                qlim=[-135*deg, 135*deg],
-                flip=False,
-                #offset=-90*deg
-                offset=-135*deg
-            ),
-
-            RevoluteDH(                     # Forearm
-                d=d4,
-                a=a4,
-                alpha=pi/2,
-                qlim=[-45*deg, 45*deg],
-                offset=45*deg
-            ),
-
-            RevoluteDH(                     # Wrist
-                d=d5,
-                a=a5,
-                alpha=-pi/2,
-                qlim=[-90*deg, 90*deg],
-            ),
-
-            RevoluteDH(                     # Radius
-                d=d6,
-                a=a6,
+            RevoluteMDH(                     # Table
+                d=0.11,             # distance from Deck to Shoulder axis
+                a=0,
                 alpha=0,
-                qlim=[-135*deg, 135*deg]
+                offset=0,           # Theta.  This is the value that changes during operation
+                #qlim=[0*deg, 354*deg],
+                qlim=[-177*deg, 177*deg],
+                flip=True           # in the visualiation tool.  If positive Theta is a move in the positive direction then  Flip = False
+            ),
+
+            RevoluteMDH(                     # Shoulder
+                d=0.05,
+                a=0,
+                alpha=90*deg,
+                offset=0,
+                #qlim=[0*deg, 172*deg],      # perhaps this can be change to 0-180 deg
+                qlim=[-86*deg, 86*deg],      # perhaps this can be change to 0-180 deg
+                flip=False
+            ),
+
+            RevoluteMDH(                     # Elbow
+                d=-0.05,
+                a=0.22,
+                alpha=0,
+                offset=220*deg,
+                #qlim=[0*deg, 270*deg],
+                qlim=[-135*deg, 135*deg],
+                flip=True
+            ),
+
+            RevoluteMDH(                     # Forearm
+                d=0.250,
+                a=0,
+                alpha=90*deg,
+                offset=0,
+                #qlim=[0*deg, 90*deg],
+                qlim=[-45*deg, 45*deg],
+                flip=True
+            ),
+
+            RevoluteMDH(                     # Wrist
+                d=0,
+                a=0,
+                alpha=-90*deg,
+                offset=-80*deg,
+                #qlim=[0*deg, 144*deg],
+                qlim=[-72*deg, 72*deg],
+                flip=False
+            ),
+
+            RevoluteMDH(                     # Radius
+                d=0.100,
+                a=0,
+                alpha=90*deg,
+                offset=0,
+                #qlim=[0*deg, 270*deg],
+                qlim=[-135*deg, 135*deg],
+                flip=False
                 
             )
         ]
@@ -95,20 +90,12 @@ class mark4(DHRobot):
             #meshdir="meshes/ABB/IRB140"
             )
 
-        self.qz = np.array([0, 0, 0, 0, 0, 0])
-        self.qr = np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
-        self.qh = np.array([-157.5*deg, -90*deg, -135*deg, -90*deg, -90*deg, -90*deg])
-        self.q1 = np.array([-157.5*deg, -90*deg, -135*deg, -90*deg, -90*deg, -90*deg])
-        self.q2 = np.array([180*deg, 90*deg, 120*deg, 90*deg, 90*deg, 90*deg])
+        self.qh = np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
+        self.qu = np.array([177*deg, 90.3*deg, 137*deg, 45*deg, 72*deg, 180*deg])
 
-        self.addconfiguration("qz", self.qz)     # Vertical
-        self.addconfiguration("qr", self.qr)
         self.addconfiguration("qh", self.qh)     # Home Position
-        self.addconfiguration("q1", self.q1)     # one extreme
-        self.addconfiguration("q2", self.q2)             # another extreme
+        self.addconfiguration("qu", self.qu)
 
-        # the robot uses 0 degrees as the home point and positive degrees from there
-        #self.jointMaxDegrees = [354, 172, 271, 90, 180, 270]
 
 
 
@@ -149,8 +136,8 @@ def genPose(robot: DHRobot, x: float, y: float, z: float, pitch = -90, roll = 0,
     Returns:
         IKsolution
     """
-    print((-1 * atan2(x, y)*(180/pi)))
     T = SE3(x, y, z) * SE3.RPY(pitch, roll, (-1 * atan2(x, y)*(180/pi)), unit='deg', order='zyx')    # Pitch, Roll, Yaw
+    print(T)
     #  for SE3.RPY(z): Pitch
     #                  -90 is parallel to the ground
     #                  -90 -> -179 is pointing down
@@ -166,18 +153,22 @@ def genPose(robot: DHRobot, x: float, y: float, z: float, pitch = -90, roll = 0,
 
     
 
-    #sol = robot.ikine_min(T, qlim=True, method='trust-constr')         # Slow but accurate method
-    #sol = robot.ikine_GN(T, qlim=True, method='L-BFGS-B')         # Fast method
-    sol = robot.ikine_GN(T)         # Fast method
-
+    #sol = robot.ikine_GN(T, joint_limits=False)
+    sol = robot.ik_GN(T)                #  C++ version
+    
+    success = sol[1]
+    iterations = sol[2]
+    searches = sol[3]
+    residual = sol[4]
     
     
-    if sol.residual > minResidualAllowed:
-        sys.exit(f"A residual distance of {sol.residual:.6f} meters is too great. The minimum allowed is {minResidualAllowed:.9f} meters")
+    if residual > minResidualAllowed:
+        sys.exit(f"A residual distance of {residual:.6f} meters is too great. The minimum allowed is {minResidualAllowed:.9f} meters")
         
-    elif not sol.success:
+    elif not success:
+        reason = sol[5]
         print("Unable to solve inverse kinematice")
-        print("  Reason: ", sol.reason)
+        print("  Reason: ", reason)
         sys.exit(sol.reason)
 
     else:
@@ -192,7 +183,53 @@ def genPose(robot: DHRobot, x: float, y: float, z: float, pitch = -90, roll = 0,
             print(f"  Iterations:  {sol.iterations}")
             print(f"  Residual:    {sol.residual:.9f} meters")
             print()
-        return sol.q
+        return sol[0]
+    
+
+def genPose2(robot: DHRobot, x: float, y: float, z: float, pitch = -90, roll = 0, minResidualAllowed = 0.0000009, printSol=False):
+    """Generate the pose (joint angles) for a given point in space using inverse kinematics.  The end effector is always pointing away from the base.
+
+    Args:
+        x (float): x in meters
+        y (float): y in meters
+        z (float): z in meters
+        pitch (int): The pitch of the end effector.  -90 is parallel to the ground, -90 -> -179 is pointing down, 0 is vertical pointing down
+        roll  (int): This is the twist of the end effector. Positive angles (0 -> 180) rotate it clockwise when viewed from the centre, Negative angles (0 -> -180) rotate it anti-clockwise
+    Returns:
+        IKsolution
+    """
+    # Convert angles to radians
+    pitch_rad = pitch * deg
+    roll_rad = roll * deg
+    yaw_rad = -1 * atan2(x, y)
+
+    # Calculate the approach vector (z-axis of end effector)
+    ax = -np.sin(pitch_rad) * np.cos(yaw_rad)
+    ay = -np.sin(pitch_rad) * np.sin(yaw_rad)
+    az = -np.cos(pitch_rad)
+    
+    # Calculate the orientation vector (y-axis of end effector)
+    ox = np.cos(roll_rad) * np.cos(yaw_rad) - np.sin(roll_rad) * np.sin(pitch_rad) * np.sin(yaw_rad)
+    oy = np.cos(roll_rad) * np.sin(yaw_rad) + np.sin(roll_rad) * np.sin(pitch_rad) * np.cos(yaw_rad)
+    oz = -np.sin(roll_rad) * np.cos(pitch_rad)
+
+    T = SE3(x, y, z) * SE3.OA([ox, oy, oz], [ax, ay, az])
+    print(T)
+    sol = robot.ik_GN(T)
+    
+    residual = sol[4]
+    success = sol[1]
+
+    if residual > minResidualAllowed:
+        sys.exit(f"A residual distance of {residual:.6f} meters is too great. The minimum allowed is {minResidualAllowed:.9f} meters")
+        
+    elif not success:
+        print("Unable to solve inverse kinematice")
+        print("  Reason: ", sol.reason)
+        sys.exit(sol.reason)
+
+    else:
+        return sol[0]
     
 
 
@@ -227,35 +264,26 @@ deg = pi/180
 
 robot = mark4()
 
+print(robot.reach)
+
+
 poses = []
 poses.append(robot.qh)
+poses.append(robot.qu)
+#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
+#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 90*deg]))
+#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
+#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 90*deg]))
+#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
 
-poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
-poses.append(np.array([0*deg, 90*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
-poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
-poses.append(np.array([0*deg, 90*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
-poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
+#poses.append(genPose(robot, 0.4, 0.4, 0.30, pitch=180, printSol=False, minResidualAllowed=0.1))
+poses.append(genPose(robot, 0, 0, 0.5, pitch=0, printSol=False))
+poses.append(genPose(robot, 0, 0, 0.45, pitch=0, printSol=False))
 
-
-#poses.append(robot.qz)
-#poses.append(genPose(robot, -0.35, 0.2, 0.2, pitch=-135, printSol=False))
-#poses.append(getPose(robot, -0.35, 0.2, 0.0, pitch=-170, printSol=False))
-#poses.append(getPose(robot, -0.35, 0.2, 0.2, pitch=-135, printSol=False))
-#poses.append(getPose(robot, 0.2, -0.2, 0.2, pitch=-135, printSol=False))
-#poses.append(getPose(robot, 0.2, -0.2, 0.0, pitch=-170, printSol=False))
-#poses.append(getPose(robot, 0.2, -0.2, 0.2, pitch=-135, printSol=False))
-#poses.append(robot.qz)
 
 trajPoses = multiTrajectory(poses, 30)
 
-# Test each joint
-"""trajPoses = multiTrajectory([robot.qh, [-157.5*deg, 90*deg, -135*deg, -90*deg, -90*deg, -90*deg], 
-    robot.qh, [-157.5*deg, -90*deg, 120*deg, -90*deg, -90*deg, -90*deg], 
-    robot.qh, [-157.5*deg, -90*deg, -135*deg, 90*deg, -90*deg, -90*deg], 
-    robot.qh, [-157.5*deg, -90*deg, -135*deg, -90*deg, 90*deg, -90*deg], 
-    robot.qh, [-157.5*deg, -90*deg, -135*deg, -90*deg, -90*deg, 90*deg], 
-    robot.qh], 30)
-"""
+
 
 # print the joint angles of a trajectory as a series of poses (in degrees)
 printPoses(trajPoses)
