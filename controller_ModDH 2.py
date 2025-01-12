@@ -16,6 +16,11 @@ class mark4(DHRobot):
     """  # noqa
     def __init__(self):
         deg = pi/180
+        # Note on offsets:  The logical model uses join angles either siode of 0, 
+        #     but the physical model uses only positive joint angles.
+        #     As such the offset is used to move the logical home position to vertical.
+        #     Then a simple mapping can be used to convert logical joint angles
+        #     to physical joint angles. 
 
         # visualisation:  https://vis-ro.web.app/robotics/modified-dh-model
         L = [
@@ -23,10 +28,8 @@ class mark4(DHRobot):
                 d=0.11,             # distance from Deck to Shoulder axis
                 a=0,
                 alpha=0,
-                offset=0,           # Theta.  This is the value that changes during operation
-                #qlim=[0*deg, 354*deg],
+                offset=177*deg,           # Theta.  This is the value that changes during operation
                 qlim=[-177*deg, 177*deg],
-                #qlim=[-354*deg, 354*deg],
                 flip=True           # in the visualiation tool.  If positive Theta is a move in the positive direction then  Flip = False
             ),
 
@@ -34,10 +37,8 @@ class mark4(DHRobot):
                 d=0.05,
                 a=0,
                 alpha=90*deg,
-                offset=0,
-                #qlim=[0*deg, 172*deg],      # perhaps this can be change to 0-180 deg
-                qlim=[-86*deg, 86*deg],      # perhaps this can be change to 0-180 deg
-                #qlim=[-172*deg, 172*deg],
+                offset=90*deg,
+                qlim=[-90*deg, 90*deg],      # perhaps this can be change to 0-180 deg
                 flip=False
             ),
 
@@ -45,10 +46,8 @@ class mark4(DHRobot):
                 d=-0.05,
                 a=0.22,
                 alpha=0,
-                offset=220*deg,
-                #qlim=[0*deg, 270*deg],
+                offset=85*deg,              # non-normalised offset is 220
                 qlim=[-135*deg, 135*deg],
-                #qlim=[-270*deg, 270*deg],
                 flip=True
             ),
 
@@ -56,21 +55,17 @@ class mark4(DHRobot):
                 d=0.250,
                 a=0,
                 alpha=90*deg,
-                offset=0,
-                #qlim=[0*deg, 90*deg],
+                offset=45*deg,
                 qlim=[-45*deg, 45*deg],
-                #qlim=[-90*deg, 90*deg],
-                flip=True
+                flip=False
             ),
 
             RevoluteMDH(                     # Wrist
                 d=0,
                 a=0,
                 alpha=-90*deg,
-                offset=-80*deg,
-                #qlim=[0*deg, 144*deg],
+                offset=8*deg,               # non-normalised joint angle is -80 
                 qlim=[-72*deg, 72*deg],
-                #qlim=[-144*deg, 144*deg],
                 flip=False
             ),
 
@@ -78,10 +73,8 @@ class mark4(DHRobot):
                 d=0.100,
                 a=0,
                 alpha=90*deg,
-                offset=0,
-                #qlim=[0*deg, 270*deg],
+                offset=135*deg,
                 qlim=[-135*deg, 135*deg],
-                #qlim=[-270*deg, 270*deg],
                 flip=False
                 
             )
@@ -95,13 +88,24 @@ class mark4(DHRobot):
             #meshdir="meshes/ABB/IRB140"
             )
 
-        self.qh = np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
-        self.qu = np.array([177*deg, 90.3*deg, 137*deg, 45*deg, 72*deg, 180*deg])
+        self.qh = np.array([-177*deg, -90*deg, -135*deg, -45*deg, -72*deg, -135*deg])
+        self.qu = np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
 
         self.addconfiguration("qh", self.qh)     # Home Position
         self.addconfiguration("qu", self.qu)
 
+    def convert_to_physical_angles(self, poses):
+        deg = pi/180
+        phyPoses = []
+        for pose in poses:
+            phyPose = []
+            for i, a in enumerate(pose):
+                limit = self.links[i].qlim[1]
+                angle = a + limit
+                phyPose.append(angle)
+            phyPoses.append(phyPose)
 
+        return phyPoses
 
 
 
@@ -229,7 +233,7 @@ robot = mark4()
 
 poses = []
 poses.append(robot.qh)
-#poses.append(robot.qu)
+poses.append(robot.qu)
 #poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
 #poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 90*deg]))
 #poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
@@ -239,11 +243,14 @@ poses.append(robot.qh)
 #poses.append(genPose(robot, 0.4, 0.4, 0.30, pitch=180, printSol=False, minResidualAllowed=0.1))
 
 
-poses.append(genPose(robot, 0, 0, 0.5, pitch=0, printSol=False, minResidualAllowed=0.1))
-#poses.append(genPose(robot, 0, 0, 0.45, pitch=0, printSol=False, minResidualAllowed=0.1))
+#poses.append(genPose(robot, 0, 0, 0.5, pitch=0, printSol=False, minResidualAllowed=0.1))
+poses.append(genPose(robot, 0, 0, 0.45, pitch=0, printSol=False, minResidualAllowed=0.1))
 
+#poses.append([-177*deg, -90*deg, -135*deg, -45*deg, -72*deg, -135*deg])
+#poses.append([-177*deg, -90*deg, -135*deg, -45*deg, -72*deg, 135*deg])
 #poses.append([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
-#poses.append([10*deg, 10*deg, 10*deg, 10*deg, 10*deg, 10*deg])
+#poses.append([177*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
+#poses.append([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
 
 
 trajPoses = multiTrajectory(poses, 30)
@@ -251,8 +258,10 @@ trajPoses = multiTrajectory(poses, 30)
 
 
 # print the joint angles of a trajectory as a series of poses (in degrees)
-printPoses(trajPoses)
-#printPoses(poses)
+#printPoses(trajPoses)
+printPoses(poses)
+print()
+printPoses(robot.convert_to_physical_angles(poses))
 
 # plot joint coordinates V time
 #rtb.xplot(trajPoses, block=False)
