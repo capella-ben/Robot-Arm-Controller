@@ -5,6 +5,8 @@ from math import pi, atan2
 import numpy as np
 import warnings, sys
 from tabulate import tabulate
+from communications import COMMUNICATIONS
+
 
 class mark4(DHRobot):
     """
@@ -38,7 +40,7 @@ class mark4(DHRobot):
                 a=0,
                 alpha=90*deg,
                 offset=90*deg,
-                qlim=[-90*deg, 90*deg],      # perhaps this can be change to 0-180 deg
+                qlim=[-90*deg, 88*deg],      # perhaps this can be change to 0-180 deg
                 flip=False
             ),
 
@@ -132,6 +134,15 @@ def printPoses(qt: np.ndarray):
     
     print(tabulate(tbl, headers=['Table', 'Shoulder', 'Elbow', 'Forearm', 'Wrist', 'Radius']))
 
+def sendPoses(qt: np.ndarray, send=False):
+    for step in qt:
+        command = 'move '
+        for joint in step:
+            command = command + f'{"%.3f" % np.rad2deg(joint)} '
+        
+        print(command)
+        if send: sorterComms.send_command(command)
+
 
 def genPose(robot: DHRobot, x: float, y: float, z: float, pitch = -90, roll = 0, minResidualAllowed = 0.0000009, printSol=False):
     """Generate the pose (joint angles) for a given point in space using inverse kinematics.  The end effector is always pointing away from the base.
@@ -140,7 +151,7 @@ def genPose(robot: DHRobot, x: float, y: float, z: float, pitch = -90, roll = 0,
         x (float): x in meters
         y (float): y in meters
         z (float): z in meters
-        pitch (int): The pitch of the end effector.  -90 is parallel to the ground, -90 -> -179 is pointing down, 0 is vertical pointing down
+        pitch (int): The pitch of the end effector.  -90 is parallel to the ground, -90 -> -179 is pointing down, 0 is vertical pointing up
         roll  (int): This is the twist of the end effector. Positive angles (0 -> 180) rotate it clockwise when viewed from the centre (i.e. over the table), Negative angles (0 -> -180) rotate it anti-clockwise when viewed from the centre (i.e. over the table)
     Returns:
         IKsolution
@@ -227,41 +238,32 @@ print()
 deg = pi/180
 
 robot = mark4()
-
 #print(robot.reach)
+
+sorterComms = COMMUNICATIONS(debug=False)
 
 
 poses = []
 poses.append(robot.qh)
-poses.append(robot.qu)
-#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
-#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 90*deg]))
-#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
-#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 90*deg]))
-#poses.append(np.array([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg]))
+#poses.append(robot.qu)
 
-#poses.append(genPose(robot, 0.4, 0.4, 0.30, pitch=180, printSol=False, minResidualAllowed=0.1))
+poses.append(genPose(robot, -0.10, -0.10, 0.45, pitch=0, printSol=False))
+#poses.append(genPose(robot, 0, 0, 0.45, pitch=0, printSol=False, minResidualAllowed=0.1))
+poses.append(genPose(robot, 0, 0, 0.45, pitch=90, printSol=False))
 
-
-#poses.append(genPose(robot, 0, 0, 0.5, pitch=0, printSol=False, minResidualAllowed=0.1))
-poses.append(genPose(robot, 0, 0, 0.45, pitch=0, printSol=False, minResidualAllowed=0.1))
-
-#poses.append([-177*deg, -90*deg, -135*deg, -45*deg, -72*deg, -135*deg])
-#poses.append([-177*deg, -90*deg, -135*deg, -45*deg, -72*deg, 135*deg])
-#poses.append([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
-#poses.append([177*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
-#poses.append([0*deg, 0*deg, 0*deg, 0*deg, 0*deg, 0*deg])
 
 
 trajPoses = multiTrajectory(poses, 30)
-
-
-
 # print the joint angles of a trajectory as a series of poses (in degrees)
 #printPoses(trajPoses)
-printPoses(poses)
+
 print()
 printPoses(robot.convert_to_physical_angles(poses))
+print()
+sendPoses(robot.convert_to_physical_angles(poses), send=False)
+
+#print()
+#sendPoses(robot.convert_to_physical_angles(trajPoses))
 
 # plot joint coordinates V time
 #rtb.xplot(trajPoses, block=False)

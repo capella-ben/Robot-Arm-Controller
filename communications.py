@@ -16,7 +16,7 @@ class COMMUNICATIONS:
         time.sleep(2)  # Allow time for the connection to establish
 
 
-    def send_command(self, command):
+    def send_commandxx(self, command):
         self.ser.write((command + '\n').encode('utf-8'))
 
         """response = self.ser.readline().decode('utf-8').strip()
@@ -32,6 +32,23 @@ class COMMUNICATIONS:
                 if response:
                     print("Response:", response)
             time.sleep(0.1)
+
+    def send_command(self, command, timeout=30):
+        self.ser.write((command + '\n').encode('utf-8'))
+
+        # Wait for "done" response with timeout
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > timeout:
+                raise TimeoutError(f"Command '{command}' timed out waiting for 'done' response")
+                
+            if self.ser.in_waiting:
+                response = self.ser.readline().decode('utf-8').replace("\n", '')
+                print(response)
+                if response:
+                    if response == "!!!":
+                        return
+            time.sleep(0.03)
 
 
     def close_connection(self):
